@@ -30,6 +30,11 @@ const userSchema= new mongoose.Schema({
         type:mongoose.Schema.Types.ObjectId,
         ref:"User"
     }],
+    userName:{
+        type:String,
+        required:true,
+        unique:true,
+    },
 },{timestamps:true})
 
 const User= mongoose.model("User",userSchema)

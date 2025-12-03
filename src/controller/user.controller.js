@@ -1,50 +1,75 @@
+import createNotification from "../../utils/notifications.js";
 import User from "../models/user.js";
-import bcrypt from 'bcrypt';
-import jwt from 'jsonwebtoken'
-import dotenv from 'dotenv'
-dotenv.config()
 
-const signup=async(req,res)=>{
+const getUserProfile= async(req,res)=>{
     try {
-        const {email,name,password,bio}=req.body
-        console.log("data fetched successfully",name,email,password,bio)
-        const existingUser=await User.findOne({email});
-        if(existingUser){
-            return res.status(400).json({message:"this user exist already"})
-        }
-        const salt=await bcrypt.genSalt(15);
-        const hashedPassword=await bcrypt.hash(password,salt)
-
-        const newUser= new User({name,email,password:hashedPassword,bio})
-        await newUser.save();
-        res.status(201).json({message:"new user is created successfully"})
-    } catch (error) {
-        console.log(error.message)
-        res.status(500).json({message:error.message})
-    }
-
-}
-
-const login= async(req,res)=>{
-    try {
-        const{email,password}=req.body;
-        const user=await User.findOne({email})
+        const {userName}=req.params
+        const user=await User.findOne(userName).select("-password").populate("followers","userName").populate("following","userName")
         if(!user){
             return res.status(404).json({message:"this user is not found"})
         }
+        res.status(200).json({message:"this user is fetched successfully",user})
 
-        const isPasswordValid=await bcrypt.compare(password,user.password)
-
-        if(!isPasswordValid){
-            return res.status(401).json({message:"the password is invalid"})
-        }
-
-        const token=jwt.sign({id:user._id,email:user.email},process.env.JWT_SECRET_KEY,{expiresIn:'24hr'})
-        res.status(200).json({message:"login successfully",user,token})
     } catch (error) {
         console.log(error.message)
         res.status(500).json({message:error.message})
-        
     }
 }
-export{signup,login}
+
+const updateUserProfile= async(req,res)=>{
+    try {
+        const{name,bio,userName}=req.body
+        const updateUser= await User.findByIdAndUpdate(req.user._id,{name,bio,userName},{new:true})
+        res.status(200).json({message:"user profile is updated successfully",updateUser})
+    } catch (error) {
+        console.log(error.message)
+        res.status(500).json({message:error.message})
+    }
+}
+const followRequest = async(req,res)=>{
+    try {
+     const targetId= req.params._id
+     if(String(targetId)===String(req.user._id)){
+        return res.status(400).json({message:"you cant follow yourself"})
+     }
+     const targetUser= await User.findById(targetId)
+     const currentUser= await User.findById(req.user._id) 
+     if(targetUser.followers.includes(req.user._id)){   
+        return res.status(400).json({message:"you've already followed this account"})
+    } 
+    targetUser.followers.push(req.user._id)
+    currentUser.following.push(targetId)
+    await targetUser.save()
+    await currentUser.save()
+    await createNotification({recipient:targetUser._id,sender:currentUser._id,type:"follow"})
+    res.status(200).json({message:"successfull follow request"})
+}
+    catch (error) {
+        console.log(error.message)
+        res.status(500).json({message:error.message})
+    }
+}
+
+const unfollowUser= async(req,res)=>{
+    try {
+        const targetId =req.params._id
+        if(String(targetId)===String(req.user._id)){
+            return res.status(400).json({message:"you can't unfollow yourself"})
+        }
+        const targetUser=await User.findById(targetId)
+        const currentUser=await User.findById(req.user._id)
+        if(!targetUser.followers.includes(req.user._id)){
+            return res.status(400).json({message:"you are not following this account"})
+        }
+        targetUser.followers.pop(req.user._id)
+        currentUser.following.pop(targetId)
+        await targetUser.save()
+        await currentUser.save()
+        await createNotification({recipient:targetUser._id,sender:currentUser._id,type:"unfollow"})
+        res.status(200).json({message:"successfull unfollow request"})
+    } catch (error) {
+        console.log(error.message)
+        res.status(500).json({message:error.message})
+    }
+}
+export{getUserProfile,updateUserProfile,followRequest,unfollowUser}
