@@ -72,4 +72,35 @@ const unfollowUser= async(req,res)=>{
         res.status(500).json({message:error.message})
     }
 }
-export{getUserProfile,updateUserProfile,followRequest,unfollowUser}
+
+const getFollowers = async(req,res)=>{
+    try {
+        const {userId}=req.params
+        const user=  await User.findById(userId).populate("followers","name userName" ).select("followers")
+        if(!user){
+            return res.status(404).json({message:"user not exist"})
+        }
+        res.status(200).json({message:"followers are fetched successfully"},user.followers)
+        
+    } catch (error) {
+        console.log(error.message)
+        res.status(500).json({message:error.message})
+    }
+}
+
+const getFollowings = async(req,res)=>{
+    try {
+        const{userId}=req.params
+        const user= await User.findById(userId).populate("following","name userName").select("following")
+        if(!user){
+            return res.status(404).json({message:"user not exist"})
+        }
+        res.status(200).json({message:"following is fetched successfully"},user.following)
+    } catch (error) {
+        console.log(error.message)
+        res.status(500).json({message:error.message})
+    }
+}
+
+
+export{getUserProfile,updateUserProfile,followRequest,unfollowUser,getFollowers,getFollowings}
