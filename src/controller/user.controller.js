@@ -4,7 +4,7 @@ import User from "../models/user.js";
 const getUserProfile= async(req,res)=>{
     try {
         const {userName}=req.params
-        const user=await User.findOne(userName).select("-password").populate("followers","userName").populate("following","userName")
+        const user=await User.findOne({userName}).select("-password").populate("followers","userName").populate("following","userName")
         if(!user){
             return res.status(404).json({message:"this user is not found"})
         }

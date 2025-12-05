@@ -1,6 +1,6 @@
 import express from 'express'
 import connectDb from './config/database.js';
-import router from './routes/user.route.js';
+import router from './routes/auth.route.js';
 
 const app = express();
 
@@ -15,7 +15,7 @@ app.get('/',(req,res)=>{
 
 
 //routes
-app.use("/user",router)
+app.use("/auth",router)
 
 
 app.listen(5000,()=>{
